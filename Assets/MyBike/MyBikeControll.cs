@@ -1,5 +1,20 @@
-﻿using UnityEngine;
-using UnityEngine.Serialization;
+﻿// Vocabulary:
+// Handlebar - Руль байка
+// Inclination - Наклон
+// Steer - Поворот
+// Rotation - Вращение
+// Direction - Направление
+// T - Интерполятор
+// Torque - Крутящий момент
+// Delta - Разница
+// RPM - Кол. оборот. в минуту
+// Wheelie - "Козлить"
+// MagicValue - ХЗ
+// 
+// 
+// 
+
+using UnityEngine;
 
 namespace Moto
 {
@@ -8,7 +23,6 @@ namespace Moto
         private const float MagicValue1 = 2.7f;
         private const int MagicValue2 = 50;
         private const float MagicValue3 = 1.3f;
-        private const float MaxAccelerationDelta = 0.1f;
         private const int MagicValue4 = -10;
         private const float MagicValue5 = 1.0f;
         private const float MagicValue6 = 5500.0f;
@@ -41,7 +55,9 @@ namespace Moto
         private const int MagicValue33 = 2000;
         private const float MagicValue34 = 1.0f;
 
-        public float Z_Rotation = 5;
+        private const float MaxSteeringDelta = 0.1f;
+
+        [SerializeField] private float _z_Rotation = 5;
 
         [SerializeField] private bool _isActiveControl = false;
 
@@ -50,7 +66,7 @@ namespace Moto
 
         [SerializeField] private bool _showNormalGizmos = false;
         [SerializeField] private Transform _mainBody;
-        [SerializeField] private Transform _bikeSteer;
+        [SerializeField] private Transform _handlebar;
 
         [SerializeField] private BikeConfiguration _bikeConfiguration;
 
@@ -78,7 +94,7 @@ namespace Moto
         /// <summary>
         ///     Clamped between -1.0f(backwards) and 1.0f(forward)
         /// </summary>
-        private float _clampedAcceleration = 0.0f;
+        private float _accelerationT = 0.0f;
 
         private bool _shifmotor;
 
@@ -145,7 +161,7 @@ namespace Moto
 
             _rigidbody = transform.GetComponent<Rigidbody>();
 
-            _steerRotation = _bikeSteer.localRotation;
+            _steerRotation = _handlebar.localRotation;
             _wheels = new WheelComponent[2];
 
             _wheels[0] = SetWheelComponent(
@@ -214,12 +230,12 @@ namespace Moto
 
             _bikeInclinationZ = Mathf.LerpAngle(
                 a: _bikeInclinationZ,
-                b: _steer2 * _bikeConfiguration.MaxTurn * Mathf.Clamp(_speed / Z_Rotation, 0.0f, 1.0f),
+                b: _steer2 * _bikeConfiguration.MaxTurn * Mathf.Clamp(_speed / _z_Rotation, 0.0f, 1.0f),
                 t: Time.deltaTime * 5.0f);
 
             // this is 90 degrees around y axis
-            if(_bikeSteer)
-                _bikeSteer.localRotation = _steerRotation * Quaternion.Euler(
+            if(_handlebar)
+                _handlebar.localRotation = _steerRotation * Quaternion.Euler(
                     x: 0,
                     y: _wheels[0].Collider.steerAngle,
                     z: 0);
@@ -277,7 +293,7 @@ namespace Moto
 
             if(_isActiveControl)
             {
-                _clampedAcceleration = 0;
+                _accelerationT = 0;
                 _isShift = false;
                 _isBrake = false;
 
@@ -290,12 +306,12 @@ namespace Moto
                     float horizontalInput = Input.GetAxis("Horizontal");
                     float verticalInput = Input.GetAxis("Vertical");
 
-                    _clampedAcceleration = verticalInput;
+                    _accelerationT = verticalInput;
 
                     _handlebarSteeringT = Mathf.MoveTowards(
                         current: _handlebarSteeringT,
                         target: horizontalInput,
-                        maxDelta: MaxAccelerationDelta);
+                        maxDelta: MaxSteeringDelta);
 
                     _isBrake = Input.GetKey(KeyCode.Space);
                     _isShift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
@@ -303,7 +319,7 @@ namespace Moto
             }
             else
             {
-                _clampedAcceleration = 0.0f;
+                _accelerationT = 0.0f;
                 _handlebarSteeringT = 0.0f;
                 _isShift = false;
                 _isBrake = false;
@@ -315,14 +331,14 @@ namespace Moto
             if(_currentGear == 0 && _isBackward)
             {
                 if(_speed < _bikeConfiguration.Gears[0] * MagicValue4)
-                    _clampedAcceleration = -_clampedAcceleration;
+                    _accelerationT = -_accelerationT;
             }
             else
             {
                 _isBackward = false;
             }
 
-            _wantedRPM = MagicValue6 * _clampedAcceleration * MagicValue7 + _wantedRPM * MagicValue8;
+            _wantedRPM = MagicValue6 * _accelerationT * MagicValue7 + _wantedRPM * MagicValue8;
 
             float rpm = 0;
             int motorizedWheels = 0;
@@ -337,9 +353,9 @@ namespace Moto
                 {
                     if(!_isNeutralGear && _isBrake && _currentGear < MagicValue9)
                     {
-                        rpm += _clampedAcceleration * _bikeConfiguration.IdleRPM;
+                        rpm += _accelerationT * _bikeConfiguration.IdleRPM;
 
-                        float someMagicZ = rpm > MagicValue11 ? Mathf.PingPong(Time.time * (_clampedAcceleration * MagicValue10), MagicValue12) - MagicValue13 : 0;
+                        float someMagicZ = rpm > MagicValue11 ? Mathf.PingPong(Time.time * (_accelerationT * MagicValue10), MagicValue12) - MagicValue13 : 0;
 
                         _bikeConfiguration.ShiftCenter = new Vector3()
                         {
@@ -356,7 +372,7 @@ namespace Moto
                         }
                         else
                         {
-                            rpm += _bikeConfiguration.IdleRPM * MagicValue14 * _clampedAcceleration;
+                            rpm += _bikeConfiguration.IdleRPM * MagicValue14 * _accelerationT;
                         }
                     }
 
@@ -374,13 +390,13 @@ namespace Moto
                     wheel.Transform.GetComponent<Collider>().enabled = false;
                 }
 
-                if(_isBrake || _clampedAcceleration < 0)
+                if(_isBrake || _accelerationT < 0)
                 {
-                    if((_clampedAcceleration < 0) || (_isBrake && wheel == _wheels[1]))
+                    if((_accelerationT < 0) || (_isBrake && wheel == _wheels[1]))
                     {
-                        if(_isBrake && (_clampedAcceleration > 0))
+                        if(_isBrake && (_accelerationT > 0))
                         {
-                            _slip = Mathf.Lerp(_slip, _bikeConfiguration.SlipBrake, _clampedAcceleration * MagicValue15);
+                            _slip = Mathf.Lerp(_slip, _bikeConfiguration.SlipBrake, _accelerationT * MagicValue15);
                         }
                         else if(_speed > 1.0f)
                         {
@@ -398,7 +414,7 @@ namespace Moto
                 }
                 else
                 {
-                    collider.brakeTorque = _clampedAcceleration == 0 ? MagicValue18 : 0;
+                    collider.brakeTorque = _accelerationT == 0 ? MagicValue18 : 0;
                     _slip = Mathf.Lerp(_slip, 1.0f, MagicValue19);
                     _w_rotate = wheel.Rotation;
                 }
@@ -516,7 +532,7 @@ namespace Moto
                     {
                         float currentTorque = collider.motorTorque;
 
-                        if(!_isBrake && _clampedAcceleration != 0 && _isNeutralGear == false)
+                        if(!_isBrake && _accelerationT != 0 && _isNeutralGear == false)
                         {
                             if((_speed < _bikeConfiguration.LimitForwardSpeed && _currentGear > 0) ||
                                 (_speed < _bikeConfiguration.LimitBackwardSpeed && _currentGear == 0))
@@ -551,13 +567,13 @@ namespace Moto
             GUI.color = Color.black;
             GUILayout.Label($"Wheelie: {_wheelie}");
             GUILayout.Label($"_bodyInclinationZ: {_bikeInclinationZ}");
-            GUILayout.Label($"_handlebarClampedDirection: {_handlebarSteeringT}");
+            GUILayout.Label($"_handlebarSteeringT: {_handlebarSteeringT}");
             GUILayout.Label($"motorRPM: {_motorRPM}");
             GUILayout.Label($"curTorque: {_currentTorque}");
             GUILayout.Label($"_newTorque: {_newTorque}");
             GUILayout.Label($"currentGear: {_currentGear}");
             GUILayout.Label($"wantedRPM: {_wantedRPM}");
-            GUILayout.Label($"_clampedAcceleration: {_clampedAcceleration}");
+            GUILayout.Label($"_clampedAcceleration: {_accelerationT}");
             GUILayout.Label($"speed: {_speed}");
             GUILayout.Toggle(_isBackward, $"Backward");
         }

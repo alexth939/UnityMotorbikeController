@@ -878,7 +878,7 @@ GameObject:
   m_Component:
   - component: {fileID: 670317347}
   m_Layer: 0
-  m_Name: ' Main'
+  m_Name: Main
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2265,7 +2265,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 112075700ca7b4feeacff4382b64ea79, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Z_Rotation: 5
+  _z_Rotation: 5
   _isActiveControl: 1
   _connectedWheels:
     <WheelFront>k__BackingField: {fileID: 336456427}
@@ -2278,7 +2278,7 @@ MonoBehaviour:
     <Distance>k__BackingField: 0.2
   _showNormalGizmos: 0
   _mainBody: {fileID: 670317347}
-  _bikeSteer: {fileID: 1187135554}
+  _handlebar: {fileID: 1187135554}
   _bikeConfiguration:
     <ShiftCenter>k__BackingField: {x: 0, y: -0.6, z: 0}
     <MaxWheelie>k__BackingField: 40
