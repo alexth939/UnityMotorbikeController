@@ -1,17 +1,14 @@
 using UnityEngine;
-using System.Collections;
 
-public class RearLookAt : MonoBehaviour
+public class RearLookAt: MonoBehaviour
 {
+    [SerializeField] private Transform _target;
+    [SerializeField] private Vector3 _position;
 
-
-    public Transform target;
-    public Vector3 position;
-
-	void Update () {
-
-        Vector3 dist = transform.localPosition - target.localPosition;
-        Quaternion rot = Quaternion.LookRotation(dist + position);
-        transform.localRotation = rot;
-	}
+    private void Update()
+    {
+        Vector3 distance = transform.localPosition - _target.localPosition;
+        Quaternion rotation = Quaternion.LookRotation(distance + _position);
+        transform.localRotation = rotation;
+    }
 }

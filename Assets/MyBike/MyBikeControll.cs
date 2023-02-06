@@ -1,757 +1,579 @@
 ﻿using UnityEngine;
-using System.Collections.Generic;
+using UnityEngine.Serialization;
 
-public class MyBikeControll : MonoBehaviour
+namespace Moto
 {
-    public bool activeControl = false;
-
-
-    public BikeWheels bikeWheels;
-
-
-    [System.Serializable]
-    public class BikeWheels
+    public class MyBikeControll: MonoBehaviour
     {
-        public ConnectWheel wheels;
-        public WheelSetting setting;
-    }
+        private const float MagicValue1 = 2.7f;
+        private const int MagicValue2 = 50;
+        private const float MagicValue3 = 1.3f;
+        private const float MaxAccelerationDelta = 0.1f;
+        private const int MagicValue4 = -10;
+        private const float MagicValue5 = 1.0f;
+        private const float MagicValue6 = 5500.0f;
+        private const float MagicValue7 = 0.1f;
+        private const float MagicValue8 = 0.9f;
+        private const int MagicValue9 = 2;
+        private const int MagicValue10 = 10;
+        private const int MagicValue11 = 1;
+        private const float MagicValue12 = 0.5f;
+        private const float MagicValue13 = 0.25f;
+        private const float MagicValue14 = 2.0f;
+        private const float MagicValue15 = 0.01f;
+        private const float MagicValue16 = 0.002f;
+        private const float MagicValue17 = 0.02f;
+        private const int MagicValue18 = 3000;
+        private const float MagicValue19 = 0.02f;
+        private const float MagicValue20 = 50.0f;
+        private const float MagicValue21 = 10.0f;
+        private const int MagicValue22 = 20;
+        private const float MagicValue23 = 100.0f;
+        private const float MagicValue24 = 5.0f;
+        private const float MagicValue25 = 10.0f;
+        private const float MagicValue26 = 0.2f;
+        private const int MagicValue27 = -10000;
+        private const float MagicValue28 = 0.95f;
+        private const float MagicValue29 = 0.05f;
+        private const float MagicValue30 = 5500.0f;
+        private const float MagicValue31 = 5200.0f;
+        private const float MagicValue32 = 0.9f;
+        private const int MagicValue33 = 2000;
+        private const float MagicValue34 = 1.0f;
 
+        public float Z_Rotation = 5;
 
-    [System.Serializable]
-    public class ConnectWheel
-    {
+        [SerializeField] private bool _isActiveControl = false;
 
-        public Transform wheelFront;
-        public Transform wheelBack; 
+        [SerializeField] private ConnectWheel _connectedWheels;
+        [SerializeField] private WheelSettings _wheelSettings;
 
-        public Transform AxleFront; 
-        public Transform AxleBack; 
+        [SerializeField] private bool _showNormalGizmos = false;
+        [SerializeField] private Transform _mainBody;
+        [SerializeField] private Transform _bikeSteer;
 
-    }
+        [SerializeField] private BikeConfiguration _bikeConfiguration;
 
+        private Quaternion _steerRotation;
 
+        /// <summary>
+        ///     Around lowest point
+        /// </summary>
+        private float _bikeInclinationZ;
 
-    [System.Serializable]
-    public class WheelSetting
-    {
+        private bool _isCrashed;
 
-        public float Radius = 0.3f;
-        public float Weight = 1000.0f; 
-        public float Distance = 0.2f;
+        /// <summary>
+        ///     Clamped between -1.0f(left) and 1.0f(right)
+        /// </summary>
+        private float _handlebarSteeringT;
 
-    }
+        private bool _isBrake;
+        private float _slip = 0.0f;
 
-    public BikeSetting bikeSetting;
+        private bool _isBackward = false;
 
-    [System.Serializable]
-    public class BikeSetting
-    {
+        private float _steer2;
 
+        /// <summary>
+        ///     Clamped between -1.0f(backwards) and 1.0f(forward)
+        /// </summary>
+        private float _clampedAcceleration = 0.0f;
 
-        public bool showNormalGizmos = false;
+        private bool _shifmotor;
 
-        public List<Transform> cameraSwitchView;
+        private float _currentTorque = 100f;
+        private float _newTorque;
 
+        private float _powerShift = 100;
 
-        public Transform MainBody;
-        public Transform bikeSteer;
+        private bool _isShift;
 
+        private float _flipRotate = 0.0f;
 
-        public float maxWheelie = 40.0f;
-        public float speedWheelie = 30.0f;
+        private float _speed = 0.0f;
 
-        public float slipBrake = 3.0f;
+        private float[] _efficiencyTable = { 0.6f, 0.65f, 0.7f, 0.75f, 0.8f, 0.85f, 0.9f, 1.0f, 1.0f, 0.95f, 0.80f, 0.70f, 0.60f, 0.5f, 0.45f, 0.40f, 0.36f, 0.33f, 0.30f, 0.20f, 0.10f, 0.05f };
 
+        private float _efficiencyTableStep = 250.0f;
 
-        public float springs = 35000.0f;
-        public float dampers = 4000.0f;
+        private int _currentGear = 1;
 
-        public float bikePower = 120;
-        public float shiftPower = 150;
-        public float brakePower = 8000;
+        private bool _isNeutralGear = false;
 
-        public Vector3 shiftCentre = new Vector3(0.0f, -0.6f, 0.0f); 
+        private float _motorRPM = 0.0f;
 
-        public float maxSteerAngle = 30.0f; 
-        public float maxTurn = 1.5f;
+        private float _wantedRPM = 0.0f;
+        private float _w_rotate;
 
-        public float shiftDownRPM = 1500.0f; 
-        public float shiftUpRPM = 4000.0f; 
-        public float idleRPM = 700.0f;
+        private Rigidbody _rigidbody;
 
-        public float stiffness = 1.0f;
+        private bool _isShifting;
 
+        private float _wheelie;
+        private Quaternion deltaRotation1, deltaRotation2;
 
+        private WheelComponent[] _wheels;
 
-        public bool automaticGear = true;
-
-        public float[] gears = { -10f, 9f, 6f, 4.5f, 3f, 2.5f };
-
-        public float LimitBackwardSpeed = 60.0f;
-        public float LimitForwardSpeed = 220.0f;
-
-
-    }
-
-    private Quaternion SteerRotation;
-
-    [HideInInspector]
-    public bool grounded = true;
-
-    private float MotorRotation;
-
-    [HideInInspector]
-    public bool crash;
-
-
-    [HideInInspector]
-    public float steer = 0; 
-    [HideInInspector]
-    public bool brake;
-    private float slip = 0.0f;
-
-
-    [HideInInspector]
-    public bool Backward = false;
-
-    [HideInInspector]
-    public float steer2;
-
-    private float accel = 0.0f; 
-    public float Z_Rotation = 5;
-
-    private bool shifmotor;
-
-    [HideInInspector]
-    public float curTorque = 100f;
-
-    [HideInInspector]
-    public float powerShift = 100;
-
-    [HideInInspector]
-    public bool shift;
-
-    private float flipRotate = 0.0f;
-
-
-    [HideInInspector]
-    public float speed = 0.0f;
-
-    float[] efficiencyTable = { 0.6f, 0.65f, 0.7f, 0.75f, 0.8f, 0.85f, 0.9f, 1.0f, 1.0f, 0.95f, 0.80f, 0.70f, 0.60f, 0.5f, 0.45f, 0.40f, 0.36f, 0.33f, 0.30f, 0.20f, 0.10f, 0.05f };
-
-    float efficiencyTableStep = 250.0f;
-
-
-    private float shiftDelay = 0.0f;
-
-    private float shiftTime = 0.0f;
-
-
-    [HideInInspector]
-    public int currentGear = 0;
-    [HideInInspector]
-    public bool NeutralGear = true;
-
-    [HideInInspector]
-    public float motorRPM = 0.0f;
-
-
-
-    private float wantedRPM = 0.0f;
-    private float w_rotate;
-
-    private Rigidbody myRigidbody;
-
-    private bool shifting;
-
-    private float Wheelie;
-    private Quaternion deltaRotation1, deltaRotation2;
-
-    [HideInInspector]
-    public float accelFwd = 0.0f;
-    [HideInInspector]
-    public float accelBack = 0.0f;
-    [HideInInspector]
-    public float steerAmount = 0.0f;
-
-    private WheelComponent[] wheels;
-
-    private class WheelComponent
-    {
-
-        public Transform wheel;
-        public Transform axle;
-        public WheelCollider collider;
-        public Vector3 startPos;
-        public float rotation = 0.0f;
-        public float maxSteer;
-        public bool drive;
-        public float pos_y = 0.0f;
-    }
-
-
-
-    private WheelComponent SetWheelComponent(Transform wheel, Transform axle, bool drive, float maxSteer, float pos_y)
-    {
-
-        WheelComponent result = new WheelComponent();
-        GameObject wheelCol = new GameObject(wheel.name + "WheelCollider");
-
-
-
-        wheelCol.transform.parent = transform;
-        wheelCol.transform.position = wheel.position;
-        wheelCol.transform.eulerAngles = transform.eulerAngles;
-        pos_y = wheelCol.transform.localPosition.y;
-
-
-       
-        wheelCol.AddComponent(typeof(WheelCollider));
-
-       
-        result.drive = drive;
-        result.wheel = wheel;
-        result.axle = axle;
-        result.collider = wheelCol.GetComponent<WheelCollider>();
-        result.pos_y = pos_y;
-        result.maxSteer = maxSteer;
-        result.startPos = axle.transform.localPosition;
-
-        return result;
-
-    }
-
-    void Awake()
-    {
-
-        if (bikeSetting.automaticGear) NeutralGear = false;
-
-        myRigidbody = transform.GetComponent<Rigidbody>();
-
-        SteerRotation = bikeSetting.bikeSteer.localRotation;
-        wheels = new WheelComponent[2];
-
-        wheels[0] = SetWheelComponent(bikeWheels.wheels.wheelFront, bikeWheels.wheels.AxleFront, false, bikeSetting.maxSteerAngle, bikeWheels.wheels.AxleFront.localPosition.y);
-        wheels[1] = SetWheelComponent(bikeWheels.wheels.wheelBack, bikeWheels.wheels.AxleBack, true, 0, bikeWheels.wheels.AxleBack.localPosition.y);
-
-        wheels[0].collider.transform.localPosition = new Vector3(0, wheels[0].collider.transform.localPosition.y, wheels[0].collider.transform.localPosition.z);
-        wheels[1].collider.transform.localPosition = new Vector3(0, wheels[1].collider.transform.localPosition.y, wheels[1].collider.transform.localPosition.z);
-
-
-        foreach (WheelComponent w in wheels)
+        private WheelComponent SetWheelComponent(Transform wheelTransform, Transform axleTransform, bool isEngineDriven, float maxSteer, float pos_y)
         {
+            WheelComponent wheel = new();
+            GameObject wheelCollider = new(wheelTransform.name + "WheelCollider");
 
+            wheelCollider.transform.parent = transform;
+            wheelCollider.transform.position = wheelTransform.position;
+            wheelCollider.transform.eulerAngles = transform.eulerAngles;
+            pos_y = wheelCollider.transform.localPosition.y;
 
-            WheelCollider col = w.collider;
+            wheelCollider.AddComponent<WheelCollider>();
 
-            col.suspensionDistance = bikeWheels.setting.Distance;
-            JointSpring js = col.suspensionSpring;
+            wheel.IsEngineDriven = isEngineDriven;
+            wheel.Transform = wheelTransform;
+            wheel.Axle = axleTransform;
+            wheel.Collider = wheelCollider.GetComponent<WheelCollider>();
+            wheel.Pos_y = pos_y;
+            wheel.MaxSteer = maxSteer;
+            wheel.StartPos = axleTransform.transform.localPosition;
 
-            js.spring = bikeSetting.springs;
-            js.damper = bikeSetting.dampers;
-            col.suspensionSpring = js;
-
-
-            col.radius = bikeWheels.setting.Radius;
-
-
-            col.mass = bikeWheels.setting.Weight;
-
-
-            WheelFrictionCurve fc = col.forwardFriction;
-
-            fc.asymptoteValue = 0.5f;
-            fc.extremumSlip = 0.4f;
-            fc.asymptoteSlip = 0.8f;
-            fc.stiffness = bikeSetting.stiffness;
-            col.forwardFriction = fc;
-            fc = col.sidewaysFriction;
-            fc.asymptoteValue = 0.75f;
-            fc.extremumSlip = 0.2f;
-            fc.asymptoteSlip = 0.5f;
-            fc.stiffness = bikeSetting.stiffness;
-            col.sidewaysFriction = fc;
-
+            return wheel;
         }
 
-
-    }
-
-
-
-    public void ShiftUp()
-    {
-
-        float now = Time.timeSinceLevelLoad;
-
-        if (now < shiftDelay) return;
-
-        if (currentGear < bikeSetting.gears.Length - 1)
+        private void Awake()
         {
+            if(_bikeConfiguration.IsAutomaticGear)
+                _isNeutralGear = false;
 
-            if (!bikeSetting.automaticGear)
+            _rigidbody = transform.GetComponent<Rigidbody>();
+
+            _steerRotation = _bikeSteer.localRotation;
+            _wheels = new WheelComponent[2];
+
+            _wheels[0] = SetWheelComponent(
+                wheelTransform: _connectedWheels.WheelFront,
+                axleTransform: _connectedWheels.AxleFront,
+                isEngineDriven: false,
+                maxSteer: _bikeConfiguration.MaxSteerAngle,
+                pos_y: _connectedWheels.AxleFront.localPosition.y);
+
+            _wheels[1] = SetWheelComponent(
+                wheelTransform: _connectedWheels.WheelBack,
+                axleTransform: _connectedWheels.AxleBack,
+                isEngineDriven: true,
+                maxSteer: 0,
+                pos_y: _connectedWheels.AxleBack.localPosition.y);
+
+            _wheels[0].Collider.transform.localPosition = new Vector3()
             {
-                if (currentGear == 0)
+                y = _wheels[0].Collider.transform.localPosition.y,
+                z = _wheels[0].Collider.transform.localPosition.z
+            };
+
+            _wheels[1].Collider.transform.localPosition = new Vector3()
+            {
+                y = _wheels[1].Collider.transform.localPosition.y,
+                z = _wheels[1].Collider.transform.localPosition.z
+            };
+
+            foreach(WheelComponent wheel in _wheels)
+            {
+                WheelCollider collider = wheel.Collider;
+
+                collider.suspensionDistance = _wheelSettings.Distance;
+                JointSpring joint = collider.suspensionSpring;
+
+                joint.spring = _bikeConfiguration.Springs;
+                joint.damper = _bikeConfiguration.Dampers;
+                collider.suspensionSpring = joint;
+
+                collider.radius = _wheelSettings.Radius;
+                collider.mass = _wheelSettings.Weight;
+
+                WheelFrictionCurve frictionCurve = collider.forwardFriction;
+
+                frictionCurve.asymptoteValue = 0.5f;
+                frictionCurve.extremumSlip = 0.4f;
+                frictionCurve.asymptoteSlip = 0.8f;
+                frictionCurve.stiffness = _bikeConfiguration.Stiffness;
+                collider.forwardFriction = frictionCurve;
+
+                frictionCurve = collider.sidewaysFriction;
+                frictionCurve.asymptoteValue = 0.75f;
+                frictionCurve.extremumSlip = 0.2f;
+                frictionCurve.asymptoteSlip = 0.5f;
+                frictionCurve.stiffness = _bikeConfiguration.Stiffness;
+                collider.sidewaysFriction = frictionCurve;
+            }
+        }
+
+        private void Update()
+        {
+            _steer2 = Mathf.LerpAngle(
+                a: _steer2,
+                b: _handlebarSteeringT * -_bikeConfiguration.MaxSteerAngle,
+                t: Time.deltaTime * 10.0f);
+
+            _bikeInclinationZ = Mathf.LerpAngle(
+                a: _bikeInclinationZ,
+                b: _steer2 * _bikeConfiguration.MaxTurn * Mathf.Clamp(_speed / Z_Rotation, 0.0f, 1.0f),
+                t: Time.deltaTime * 5.0f);
+
+            // this is 90 degrees around y axis
+            if(_bikeSteer)
+                _bikeSteer.localRotation = _steerRotation * Quaternion.Euler(
+                    x: 0,
+                    y: _wheels[0].Collider.steerAngle,
+                    z: 0);
+
+            if(!_isCrashed)
+            {
+                _flipRotate = (transform.eulerAngles.z is > 90 and < 270) ? 180.0f : 0.0f;
+
+                _wheelie = Mathf.Clamp(_wheelie, 0, _bikeConfiguration.MaxWheelie);
+
+                if(_isShifting)
                 {
-                    if (NeutralGear) { currentGear++; NeutralGear = false; }
-                    else
-                    { NeutralGear = true; }
+                    _wheelie += _bikeConfiguration.SpeedWheelie * Time.deltaTime / (_speed / MagicValue2);
                 }
                 else
                 {
-                    currentGear++;
+                    _wheelie = Mathf.MoveTowards(_wheelie, 0, _bikeConfiguration.SpeedWheelie * 2 * Time.deltaTime * MagicValue3);
                 }
+
+                deltaRotation1 = Quaternion.Euler(new Vector3()
+                {
+                    x = -_wheelie,
+                    z = _flipRotate - transform.localEulerAngles.z + _bikeInclinationZ
+                });
+
+                deltaRotation2 = Quaternion.Euler(
+                    x: 0,
+                    y: 0,
+                    z: _flipRotate - transform.localEulerAngles.z);
+
+                _rigidbody.MoveRotation(_rigidbody.rotation * deltaRotation2);
+                _mainBody.localRotation = deltaRotation1;
             }
             else
             {
-                currentGear++;
+                _mainBody.localRotation = Quaternion.identity;
+                _wheelie = 0;
             }
-
-
-               shiftDelay = now + 1.0f;
-               shiftTime = 1.0f;
         }
-    }
 
-    public void ShiftDown()
-    {
-           float now = Time.timeSinceLevelLoad;
-
-           if (now < shiftDelay) return;
-
-        if (currentGear > 0 || NeutralGear)
+        private void FixedUpdate()
         {
+            _speed = _rigidbody.velocity.magnitude * MagicValue1;
 
-            if (!bikeSetting.automaticGear)
+            if(_isCrashed)
             {
-
-                if (currentGear == 1)
-                {
-                    if (!NeutralGear) { currentGear--; NeutralGear = true; }
-                }
-                else if (currentGear == 0) { NeutralGear = false; } else { currentGear--; }
+                _rigidbody.constraints = RigidbodyConstraints.None;
+                _rigidbody.centerOfMass = Vector3.zero;
             }
             else
             {
-                currentGear--;
+                _rigidbody.constraints = RigidbodyConstraints.FreezeRotationZ;
+                _rigidbody.centerOfMass = _bikeConfiguration.ShiftCenter;
             }
-                shiftDelay = now + 0.1f;
-                shiftTime = 2.0f;
-        }
-    }
 
-    void Update()
-    {
-
-        if (activeControl)
-        {
-
-            if (!bikeSetting.automaticGear)
+            if(_isActiveControl)
             {
-                if (Input.GetKeyDown("page up"))
+                _clampedAcceleration = 0;
+                _isShift = false;
+                _isBrake = false;
+
+                if(_isCrashed)
                 {
-                    ShiftUp();
-
-
-                }
-                if (Input.GetKeyDown("page down"))
-                {
-                    ShiftDown();
-
-                }
-            }
-
-        }
-
-        steer2 = Mathf.LerpAngle(steer2, steer * -bikeSetting.maxSteerAngle, Time.deltaTime * 10.0f);
-
-        MotorRotation = Mathf.LerpAngle(MotorRotation, steer2 * bikeSetting.maxTurn * (Mathf.Clamp(speed / Z_Rotation, 0.0f, 1.0f)), Time.deltaTime * 5.0f);
-
-        if (bikeSetting.bikeSteer)
-            bikeSetting.bikeSteer.localRotation = SteerRotation * Quaternion.Euler(0, wheels[0].collider.steerAngle, 0); // this is 90 degrees around y axis
-
-
-
-        if (!crash)
-        {
-            flipRotate = (transform.eulerAngles.z > 90 && transform.eulerAngles.z < 270) ? 180.0f : 0.0f;
-
-            Wheelie = Mathf.Clamp(Wheelie, 0, bikeSetting.maxWheelie);
-
-
-            if (shifting)
-            {
-                Wheelie += bikeSetting.speedWheelie * Time.deltaTime / (speed / 50);
-            }
-            else
-            {
-                Wheelie = Mathf.MoveTowards(Wheelie, 0, (bikeSetting.speedWheelie * 2) * Time.deltaTime * 1.3f);
-            }
-
-            deltaRotation1 = Quaternion.Euler(-Wheelie, 0, flipRotate - transform.localEulerAngles.z + (MotorRotation));
-            deltaRotation2 = Quaternion.Euler(0, 0, flipRotate - transform.localEulerAngles.z);
-
-
-            myRigidbody.MoveRotation(myRigidbody.rotation * deltaRotation2);
-            bikeSetting.MainBody.localRotation = deltaRotation1;
-
-        }
-        else
-        {
-
-            bikeSetting.MainBody.localRotation = Quaternion.identity;
-            Wheelie = 0;
-        }
-    }
-
-    void FixedUpdate()
-    {
-
-        speed = myRigidbody.velocity.magnitude * 2.7f;
-
-
-        if (crash)
-        {
-            myRigidbody.constraints = RigidbodyConstraints.None;
-            myRigidbody.centerOfMass = Vector3.zero;
-        }
-        else
-        {
-            myRigidbody.constraints = RigidbodyConstraints.FreezeRotationZ;
-            myRigidbody.centerOfMass = bikeSetting.shiftCentre;
-        }
-
-        if (activeControl)
-        {
-
-            accel = 0.0f;
-            shift = false;
-            brake = false;
-
-            if (!crash)
-            {
-
-                steer = Mathf.MoveTowards(steer, Input.GetAxis("Horizontal"), 0.1f);
-                accel = Input.GetAxis("Vertical");
-                brake = Input.GetButton("Jump");
-                shift = Input.GetKey(KeyCode.LeftShift) | Input.GetKey(KeyCode.RightShift);
-            }
-            else
-            {
-                steer = 0;
-            }
-        }
-        else
-        {
-            accel = 0.0f;
-            steer = 0.0f;
-            shift = false;
-            brake = false;
-        }
-
-        if (bikeSetting.automaticGear && (currentGear == 1) && (accel < 0.0f))
-        {
-            if (speed < 1.0f)
-                ShiftDown();
-
-        }
-        else if (bikeSetting.automaticGear && (currentGear == 0) && (accel > 0.0f))
-        {
-            if (speed < 5.0f)
-                ShiftUp(); 
-
-        }
-        else if (bikeSetting.automaticGear && (motorRPM > bikeSetting.shiftUpRPM) && (accel > 0.0f) && speed > 10.0f && !brake)
-        {
-            ShiftUp(); 
-
-        }
-        else if (bikeSetting.automaticGear && (motorRPM < bikeSetting.shiftDownRPM) && (currentGear > 1))
-        {
-            ShiftDown(); 
-        }
-
-        if (speed < 1.0f) Backward = true;
-        
-
-        if (currentGear == 0 && Backward == true)
-        {
-            if (speed < bikeSetting.gears[0] * -10)
-                accel = -accel; 
-        }
-        else
-        {
-            Backward = false;
-        }
-
-        wantedRPM = (5500.0f * accel) * 0.1f + wantedRPM * 0.9f;
-
-        float rpm = 0.0f;
-        int motorizedWheels = 0;
-        bool floorContact = false;
-        int currentWheel = 0;
-
-        foreach (WheelComponent w in wheels)
-        {
-            WheelHit hit;
-            WheelCollider col = w.collider;
-
-            if (w.drive)
-            {
-                if (!NeutralGear && brake && currentGear < 2)
-                {
-                    rpm += accel * bikeSetting.idleRPM;
-                    
-                    if (rpm > 1)
-                    {
-                        bikeSetting.shiftCentre.z = Mathf.PingPong(Time.time * (accel * 10), 0.5f) - 0.25f;
-                    }
-                    else
-                    {
-                        bikeSetting.shiftCentre.z = 0.0f;
-                    }
-                    
+                    _handlebarSteeringT = 0;
                 }
                 else
                 {
-                    if (!NeutralGear)
-                    {
-                        rpm += col.rpm;
-                    }
-                    else
-                    {
-                        rpm += ((bikeSetting.idleRPM * 2.0f) * accel);
-                    }
-                }
+                    float horizontalInput = Input.GetAxis("Horizontal");
+                    float verticalInput = Input.GetAxis("Vertical");
 
-                motorizedWheels++;
-            }
+                    _clampedAcceleration = verticalInput;
 
+                    _handlebarSteeringT = Mathf.MoveTowards(
+                        current: _handlebarSteeringT,
+                        target: horizontalInput,
+                        maxDelta: MaxAccelerationDelta);
 
-            if (crash)
-            {
-                w.collider.enabled = false;
-                w.wheel.GetComponent<Collider>().enabled= true;
-            }
-            else
-            {
-                w.collider.enabled = true;
-                w.wheel.GetComponent<Collider>().enabled = false;
-            }
-
-
-
-
-            if (brake || accel < 0.0f)
-            {
-                if ((accel < 0.0f) || (brake && w == wheels[1]))
-                {
-
-                    if (brake && (accel > 0.0f))
-                    {
-                        slip = Mathf.Lerp(slip, bikeSetting.slipBrake, accel * 0.01f);
-                    }
-                    else if (speed > 1.0f)
-                    {
-                        slip = Mathf.Lerp(slip, 1.0f, 0.002f);
-                    }
-                    else
-                    {
-                        slip = Mathf.Lerp(slip, 1.0f, 0.02f);
-                    }
-
-
-                    wantedRPM = 0.0f;
-                    col.brakeTorque = bikeSetting.brakePower;
-                    w.rotation = w_rotate;
-
+                    _isBrake = Input.GetKey(KeyCode.Space);
+                    _isShift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
                 }
             }
             else
             {
-
-                col.brakeTorque = accel == 0 ? col.brakeTorque = 3000 : col.brakeTorque = 0;
-
-                slip = Mathf.Lerp(slip, 1.0f, 0.02f);
-
-                w_rotate = w.rotation;
-
+                _clampedAcceleration = 0.0f;
+                _handlebarSteeringT = 0.0f;
+                _isShift = false;
+                _isBrake = false;
             }
 
-            WheelFrictionCurve fc = col.forwardFriction;
+            if(_speed < MagicValue5)
+                _isBackward = true;
 
-
-            if (w == wheels[1])
+            if(_currentGear == 0 && _isBackward)
             {
-
-                fc.stiffness = bikeSetting.stiffness / slip;
-                col.forwardFriction = fc;
-                fc = col.sidewaysFriction;
-                fc.stiffness = bikeSetting.stiffness / slip;
-                col.sidewaysFriction = fc; 
-            }
-
-            if (shift && (currentGear > 1 && speed > 50.0f) && shifmotor)
-            {
-                shifting = true;
-                if (powerShift == 0) { shifmotor = false; }
-
-                powerShift = Mathf.MoveTowards(powerShift, 0.0f, Time.deltaTime * 10.0f);
-
-                curTorque = powerShift > 0 ? bikeSetting.shiftPower : bikeSetting.bikePower;
+                if(_speed < _bikeConfiguration.Gears[0] * MagicValue4)
+                    _clampedAcceleration = -_clampedAcceleration;
             }
             else
             {
-                shifting = false;
-
-                if (powerShift > 20)
-                {
-                    shifmotor = true;
-                }
-
-                powerShift = Mathf.MoveTowards(powerShift, 100.0f, Time.deltaTime * 5.0f);
-                curTorque = bikeSetting.bikePower;
+                _isBackward = false;
             }
 
+            _wantedRPM = MagicValue6 * _clampedAcceleration * MagicValue7 + _wantedRPM * MagicValue8;
 
-            w.rotation = Mathf.Repeat(w.rotation + Time.deltaTime * col.rpm * 360.0f / 60.0f, 360.0f);
-            w.wheel.localRotation = Quaternion.Euler(w.rotation,0.0f, 0.0f);
+            float rpm = 0;
+            int motorizedWheels = 0;
+            bool isFloorContact = false;
+            int currentWheel = 0;
 
-            Vector3 lp = w.axle.localPosition;
-
-
-            if (col.GetGroundHit(out hit) && (w == wheels[1] || (w == wheels[0] && Wheelie == 0)))
+            foreach(WheelComponent wheel in _wheels)
             {
+                WheelCollider collider = wheel.Collider;
 
-                lp.y -= Vector3.Dot(w.wheel.position - hit.point, transform.TransformDirection(0, 1, 0)) - (col.radius);
-                lp.y = Mathf.Clamp(lp.y, w.startPos.y - bikeWheels.setting.Distance, w.startPos.y + bikeWheels.setting.Distance);
-
-
-                floorContact = floorContact || (w.drive);
-
-
-                if (!crash)
+                if(wheel.IsEngineDriven)
                 {
-
-                    myRigidbody.angularDrag = 10.0f;
-                }
-                else
-                {
-                    myRigidbody.angularDrag = 0.0f;
-
-                }
-
-                grounded = true;
-
-                if (w.collider.GetComponent<WheelSkidmarks>())
-                w.collider.GetComponent<WheelSkidmarks>().enabled = true;
-
-            }
-            else
-            {
-                grounded = false;
-
-                if (w.collider.GetComponent<WheelSkidmarks>())
-                w.collider.GetComponent<WheelSkidmarks>().enabled = false;
-
-                lp.y = w.startPos.y - bikeWheels.setting.Distance;
-
-                if (!wheels[0].collider.isGrounded && !wheels[1].collider.isGrounded)
-                {
-
-                    myRigidbody.centerOfMass = new Vector3(0, 0.2f, 0);
-                    myRigidbody.angularDrag = 1.0f;
-
-                    myRigidbody.AddForce(0, -10000, 0);
-                }
-
-            }
-
-
-            currentWheel++;
-            w.axle.localPosition = lp;
-
-        }
-
-        if (motorizedWheels > 1)
-        {
-            rpm = rpm / motorizedWheels;
-        }
-
-
-        motorRPM = 0.95f * motorRPM + 0.05f * Mathf.Abs(rpm * bikeSetting.gears[currentGear]);
-        if (motorRPM > 5500.0f) motorRPM = 5200.0f;
-
-
-        int index = (int)(motorRPM / efficiencyTableStep);
-        if (index >= efficiencyTable.Length) index = efficiencyTable.Length - 1;
-        if (index < 0) index = 0;
-
-        float newTorque = curTorque * bikeSetting.gears[currentGear] * efficiencyTable[index];
-
-        foreach (WheelComponent w in wheels)
-        {
-            WheelCollider col = w.collider;
-
-            if (w.drive)
-            {
-
-                if (Mathf.Abs(col.rpm) > Mathf.Abs(wantedRPM))
-                {
-
-                    col.motorTorque = 0;
-                }
-                else
-                {
-                    
-                    float curTorqueCol = col.motorTorque;
-
-                    if (!brake && accel != 0 && NeutralGear == false)
+                    if(!_isNeutralGear && _isBrake && _currentGear < MagicValue9)
                     {
-                        if ((speed < bikeSetting.LimitForwardSpeed && currentGear > 0) ||
-                            (speed < bikeSetting.LimitBackwardSpeed && currentGear == 0))
+                        rpm += _clampedAcceleration * _bikeConfiguration.IdleRPM;
+
+                        float someMagicZ = rpm > MagicValue11 ? Mathf.PingPong(Time.time * (_clampedAcceleration * MagicValue10), MagicValue12) - MagicValue13 : 0;
+
+                        _bikeConfiguration.ShiftCenter = new Vector3()
                         {
-
-                            col.motorTorque = curTorqueCol * 0.9f + newTorque * 1.0f;
+                            x = _bikeConfiguration.ShiftCenter.x,
+                            y = _bikeConfiguration.ShiftCenter.y,
+                            z = someMagicZ
+                        };
+                    }
+                    else
+                    {
+                        if(!_isNeutralGear)
+                        {
+                            rpm += collider.rpm;
                         }
                         else
                         {
-                            col.motorTorque = 0;
-                            col.brakeTorque = 2000;
+                            rpm += _bikeConfiguration.IdleRPM * MagicValue14 * _clampedAcceleration;
+                        }
+                    }
+
+                    motorizedWheels++;
+                }
+
+                if(_isCrashed)
+                {
+                    wheel.Collider.enabled = false;
+                    wheel.Transform.GetComponent<Collider>().enabled = true;
+                }
+                else
+                {
+                    wheel.Collider.enabled = true;
+                    wheel.Transform.GetComponent<Collider>().enabled = false;
+                }
+
+                if(_isBrake || _clampedAcceleration < 0)
+                {
+                    if((_clampedAcceleration < 0) || (_isBrake && wheel == _wheels[1]))
+                    {
+                        if(_isBrake && (_clampedAcceleration > 0))
+                        {
+                            _slip = Mathf.Lerp(_slip, _bikeConfiguration.SlipBrake, _clampedAcceleration * MagicValue15);
+                        }
+                        else if(_speed > 1.0f)
+                        {
+                            _slip = Mathf.Lerp(_slip, 1.0f, MagicValue16);
+                        }
+                        else
+                        {
+                            _slip = Mathf.Lerp(_slip, 1.0f, MagicValue17);
                         }
 
-
+                        _wantedRPM = 0;
+                        collider.brakeTorque = _bikeConfiguration.BrakePower;
+                        wheel.Rotation = _w_rotate;
                     }
-                    else
-                    {
-                        col.motorTorque = 0;
+                }
+                else
+                {
+                    collider.brakeTorque = _clampedAcceleration == 0 ? MagicValue18 : 0;
+                    _slip = Mathf.Lerp(_slip, 1.0f, MagicValue19);
+                    _w_rotate = wheel.Rotation;
+                }
 
+                WheelFrictionCurve frictionCurve = collider.forwardFriction;
+
+                if(wheel == _wheels[1])
+                {
+                    frictionCurve.stiffness = _bikeConfiguration.Stiffness / _slip;
+                    collider.forwardFriction = frictionCurve;
+
+                    frictionCurve = collider.sidewaysFriction;
+                    frictionCurve.stiffness = _bikeConfiguration.Stiffness / _slip;
+                    collider.sidewaysFriction = frictionCurve;
+                }
+
+                if(_isShift && _currentGear > 1 && _speed > MagicValue20 && _shifmotor)
+                {
+                    _isShifting = true;
+
+                    if(_powerShift == 0)
+                    {
+                        _shifmotor = false;
+                    }
+
+                    _powerShift = Mathf.MoveTowards(_powerShift, 0.0f, Time.deltaTime * MagicValue21);
+
+                    _currentTorque = _powerShift > 0 ? _bikeConfiguration.ShiftPower : _bikeConfiguration.BikePower;
+                }
+                else
+                {
+                    _isShifting = false;
+
+                    if(_powerShift > MagicValue22)
+                    {
+                        _shifmotor = true;
+                    }
+
+                    _powerShift = Mathf.MoveTowards(_powerShift, MagicValue23, Time.deltaTime * MagicValue24);
+                    _currentTorque = _bikeConfiguration.BikePower;
+                }
+
+                wheel.Rotation = Mathf.Repeat(wheel.Rotation + Time.deltaTime * collider.rpm * 360.0f / 60.0f, 360.0f);
+                wheel.Transform.localRotation = Quaternion.Euler(wheel.Rotation, 0.0f, 0.0f);
+
+                Vector3 localPosition = wheel.Axle.localPosition;
+
+                if(collider.GetGroundHit(out WheelHit hit) && (wheel == _wheels[1] || (wheel == _wheels[0] && _wheelie == 0)))
+                {
+                    localPosition.y -= Vector3.Dot(
+                        lhs: wheel.Transform.position - hit.point,
+                        rhs: transform.TransformDirection(0, 1, 0)) - collider.radius;
+
+                    localPosition.y = Mathf.Clamp(
+                        value: localPosition.y,
+                        min: wheel.StartPos.y - _wheelSettings.Distance,
+                        max: wheel.StartPos.y + _wheelSettings.Distance);
+
+                    isFloorContact = isFloorContact || wheel.IsEngineDriven;
+
+                    _rigidbody.angularDrag = _isCrashed ? 0.0f : MagicValue25;
+
+                    if(wheel.Collider.GetComponent<WheelSkidmarks>())
+                        wheel.Collider.GetComponent<WheelSkidmarks>().enabled = true;
+                }
+                else
+                {
+                    if(wheel.Collider.GetComponent<WheelSkidmarks>())
+                        wheel.Collider.GetComponent<WheelSkidmarks>().enabled = false;
+
+                    localPosition.y = wheel.StartPos.y - _wheelSettings.Distance;
+
+                    if(!_wheels[0].Collider.isGrounded && !_wheels[1].Collider.isGrounded)
+                    {
+                        _rigidbody.centerOfMass = new Vector3(0, MagicValue26, 0);
+                        _rigidbody.angularDrag = 1.0f;
+
+                        _rigidbody.AddForce(0, MagicValue27, 0);
                     }
                 }
 
+                currentWheel++;
+                wheel.Axle.localPosition = localPosition;
             }
 
-            float SteerAngle = Mathf.Clamp((speed) / bikeSetting.maxSteerAngle, 1.0f, bikeSetting.maxSteerAngle);
-            col.steerAngle = steer * (w.maxSteer / SteerAngle);
+            if(motorizedWheels > 1)
+                rpm /= motorizedWheels;
 
+            _motorRPM = MagicValue28 * _motorRPM + MagicValue29 * Mathf.Abs(rpm * _bikeConfiguration.Gears[_currentGear]);
+
+            if(_motorRPM > MagicValue30)
+                _motorRPM = MagicValue31;
+
+            int index = (int)(_motorRPM / _efficiencyTableStep);
+
+            if(index >= _efficiencyTable.Length)
+                index = _efficiencyTable.Length - 1;
+
+            if(index < 0)
+                index = 0;
+
+            _newTorque = _currentTorque * _bikeConfiguration.Gears[_currentGear] * _efficiencyTable[index];
+
+            foreach(var wheel in _wheels)
+            {
+                WheelCollider collider = wheel.Collider;
+
+                if(wheel.IsEngineDriven)
+                {
+                    if(Mathf.Abs(collider.rpm) > Mathf.Abs(_wantedRPM))
+                    {
+                        collider.motorTorque = 0;
+                    }
+                    else
+                    {
+                        float currentTorque = collider.motorTorque;
+
+                        if(!_isBrake && _clampedAcceleration != 0 && _isNeutralGear == false)
+                        {
+                            if((_speed < _bikeConfiguration.LimitForwardSpeed && _currentGear > 0) ||
+                                (_speed < _bikeConfiguration.LimitBackwardSpeed && _currentGear == 0))
+                            {
+                                collider.motorTorque = currentTorque * MagicValue32 + _newTorque;
+                            }
+                            else
+                            {
+                                collider.motorTorque = 0;
+                                collider.brakeTorque = MagicValue33;
+                            }
+                        }
+                        else
+                        {
+                            collider.motorTorque = 0;
+                        }
+                    }
+                }
+
+                float SteerAngle = Mathf.Clamp(
+                    value: _speed / _bikeConfiguration.MaxSteerAngle,
+                    min: MagicValue34,
+                    max: _bikeConfiguration.MaxSteerAngle);
+
+                collider.steerAngle = _handlebarSteeringT * (wheel.MaxSteer / SteerAngle);
+            }
+            //        Pitch = Mathf.Clamp(1.2f + ((motorRPM - bikeSetting.idleRPM) / (bikeSetting.shiftUpRPM - bikeSetting.idleRPM)), 1.0f, 10.0f);
         }
 
-//        Pitch = Mathf.Clamp(1.2f + ((motorRPM - bikeSetting.idleRPM) / (bikeSetting.shiftUpRPM - bikeSetting.idleRPM)), 1.0f, 10.0f);
+        private void OnGUI()
+        {
+            GUI.color = Color.black;
+            GUILayout.Label($"Wheelie: {_wheelie}");
+            GUILayout.Label($"_bodyInclinationZ: {_bikeInclinationZ}");
+            GUILayout.Label($"_handlebarClampedDirection: {_handlebarSteeringT}");
+            GUILayout.Label($"motorRPM: {_motorRPM}");
+            GUILayout.Label($"curTorque: {_currentTorque}");
+            GUILayout.Label($"_newTorque: {_newTorque}");
+            GUILayout.Label($"currentGear: {_currentGear}");
+            GUILayout.Label($"wantedRPM: {_wantedRPM}");
+            GUILayout.Label($"_clampedAcceleration: {_clampedAcceleration}");
+            GUILayout.Label($"speed: {_speed}");
+            GUILayout.Toggle(_isBackward, $"Backward");
+        }
 
-        shiftTime = Mathf.MoveTowards(shiftTime, 0.0f, 0.1f);
-    }
-    void OnDrawGizmos()
-    {
+        private void OnDrawGizmos()
+        {
+            if(!_showNormalGizmos || Application.isPlaying)
+                return;
 
-        if (!bikeSetting.showNormalGizmos || Application.isPlaying) return;
+            Matrix4x4 rotationMatrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);
 
-        Matrix4x4 rotationMatrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);
+            Gizmos.matrix = rotationMatrix;
+            Gizmos.color = new Color(1, 0, 0, 0.5f);
 
-        Gizmos.matrix = rotationMatrix;
-        Gizmos.color = new Color(1, 0, 0, 0.5f);
-
-        Gizmos.DrawCube(Vector3.up/1.6f, new Vector3(0.5f, 1.0f, 2.5f));
-        Gizmos.DrawSphere(bikeSetting.shiftCentre, 0.2f);
-
+            Gizmos.DrawCube(Vector3.up / 1.6f, new Vector3(0.5f, 1.0f, 2.5f));
+            Gizmos.DrawSphere(_bikeConfiguration.ShiftCenter, 0.2f);
+        }
     }
 }
