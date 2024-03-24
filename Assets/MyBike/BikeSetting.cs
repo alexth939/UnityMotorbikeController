@@ -20,7 +20,6 @@ namespace Moto
         [field: SerializeField] public float IdleRPM { get; private set; } = 700.0f;
         [field: SerializeField] public float Stiffness { get; private set; } = 1.0f;
         [field: SerializeField] public bool IsAutomaticGear { get; private set; } = true;
-        [field: SerializeField] public float[] Gears { get; private set; } = { -10f, 9f, 6f, 4.5f, 3f, 2.5f };
         [field: SerializeField] public float LimitBackwardSpeed { get; private set; } = 3.0f;
         [field: SerializeField] public float LimitForwardSpeed { get; private set; } = 220.0f;
         [field: SerializeField] public float MaxSteerAngle { get; private set; } = 50.0f;
