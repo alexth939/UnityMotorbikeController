@@ -16,13 +16,13 @@ public class ForwardMovingCar : MonoBehaviour
 
     private void FixedUpdate()
     {
-        _rigidbody.AddForce(_movingDirection.normalized * _movingSpeed, ForceMode.Acceleration);
+        _rigidbody.AddForce(transform.rotation * _movingDirection.normalized * _movingSpeed, ForceMode.Acceleration);
         _rigidbody.velocity = Vector3.ClampMagnitude(_rigidbody.velocity, 5.0f);
     }
 
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
-        Gizmos.DrawLine(transform.position, transform.position + _movingDirection.normalized);
+        Gizmos.DrawLine(transform.position, transform.position + transform.rotation*_movingDirection.normalized);
     }
 }
