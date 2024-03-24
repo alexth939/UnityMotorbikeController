@@ -13,17 +13,20 @@ MonoBehaviour:
   m_Name: FolderIcons
   m_EditorClassIdentifier: 
   showOverlay: 1
-  showCustomFolder: 1
+  showCustomFolder: 0
   icons:
   - folder: {fileID: 102900000, guid: 918ab99a9b8c5a34cb28ad0e19189ad6, type: 3}
     folderIcon: {fileID: 2800000, guid: 543f9e77e691c5e41af8c03cc62cb4ae, type: 3}
     overlayIcon: {fileID: 0}
-  - folder: {fileID: 102900000, guid: 131a6b21c8605f84396be9f6751fb6e3, type: 3}
+  - folder: {fileID: 102900000, guid: 4f9b129d7442cde458646e670dd52437, type: 3}
     folderIcon: {fileID: 2800000, guid: 2c26ab15f039cf24c973010d915b6385, type: 3}
     overlayIcon: {fileID: 0}
-  - folder: {fileID: 102900000, guid: 12d606051f533d94cbb9a332a18a09b8, type: 3}
+  - folder: {fileID: 102900000, guid: d96e73845028a7a49b8aba125f46c15b, type: 3}
     folderIcon: {fileID: 2800000, guid: cc08e386fb48b9e439c3a9bd99e3728e, type: 3}
     overlayIcon: {fileID: 0}
   - folder: {fileID: 102900000, guid: 9df7781a37991c9459a981d268e139e2, type: 3}
     folderIcon: {fileID: 2800000, guid: 75edfcfa691bf9f4e897dc8ee2328a45, type: 3}
+    overlayIcon: {fileID: 0}
+  - folder: {fileID: 102900000, guid: 45192af4b21e64233bf08a0caa2fa7ce, type: 3}
+    folderIcon: {fileID: 2800000, guid: b5e419d773bca3740814f6236e92f59f, type: 3}
     overlayIcon: {fileID: 0}
