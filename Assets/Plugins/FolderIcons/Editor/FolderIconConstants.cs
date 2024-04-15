@@ -16,7 +16,6 @@ namespace FolderIcons
         public const string ICONS_TEXTURE_PATH = "Assets/ColouredFolders/Icons";
 
         public const string PREF_FOLDER = "FolderPlus_ShowCustomFolders";
-        public const string PREF_OVERLAY = "FolderPlus_ShowCustomIcons";
 
         // GUI
         public const float MAX_TREE_WIDTH = 118f;

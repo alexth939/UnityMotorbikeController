@@ -13,27 +13,21 @@ namespace FolderIcons
         /// </summary>
         /// <param name="rect">Rect to draw preview</param>
         /// <param name="folder">The folder texture</param>
-        /// <param name="overlay">The overlay texture</param>
-        public static void DrawFolderPreview(Rect rect, Texture folder, Texture overlay)
+        public static void DrawFolderPreview(Rect rect, Texture folder)
         {
-            if (folder == null && overlay == null)
+            if(folder == null)
             {
                 return;
             }
 
-            if (folder != null)
+            if(folder != null)
             {
-                GUI.DrawTexture (rect, folder, ScaleMode.ScaleToFit);
+                GUI.DrawTexture(rect, folder, ScaleMode.ScaleToFit);
             }
 
             //Half size of overlay, and reposition to center
             rect.size *= 0.5f;
             rect.position += rect.size * 0.5f;
-
-            if (overlay != null)
-            {
-                GUI.DrawTexture (rect, overlay, ScaleMode.ScaleToFit);
-            }
         }
 
         /// <summary>
@@ -41,26 +35,24 @@ namespace FolderIcons
         /// </summary>
         /// <param name="rect">Folder rect</param>
         /// <param name="folder">Folder texture</param>
-        /// <param name="guid">The guid of the project fodler</param>
-        public static void DrawFolderTexture(Rect rect, Texture folder, string guid)
+        public static void DrawFolderTexture(Rect rect, Texture folder)
         {
-            if (folder == null)
+            if(folder == null)
             {
                 return;
             }
 
-            EditorGUI.DrawRect (rect, FolderIconConstants.BackgroundColour);
-            GUI.DrawTexture (rect, folder, ScaleMode.ScaleAndCrop);
+            EditorGUI.DrawRect(rect, FolderIconConstants.BackgroundColour);
+            GUI.DrawTexture(rect, folder, ScaleMode.ScaleAndCrop);
         }
 
         /// <summary>
         /// Draw the folder overlay texture, given the folder rect
         /// </summary>
         /// <param name="rect">Original rect of the folder</param>
-        /// <param name="overlay">Overlay Texture</param>
         public static void DrawOverlayTexture(Rect rect, Texture overlay)
         {
-            if (overlay == null)
+            if(overlay == null)
             {
                 return;
             }
@@ -68,7 +60,7 @@ namespace FolderIcons
             rect.size *= 0.5f;
             rect.position += rect.size * 0.5f;
 
-            GUI.DrawTexture (rect, overlay);
+            GUI.DrawTexture(rect, overlay);
         }
 
         /// <summary>

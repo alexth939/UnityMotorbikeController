@@ -209,6 +209,17 @@ namespace Moto
                 frictionCurve.stiffness = _bikeConfiguration.Stiffness;
                 collider.sidewaysFriction = frictionCurve;
             }
+
+            // заднее колесо соскальзывает при езде кругами по наклоненной поверхности.
+            WheelFrictionCurve backWheelSidewaysFrictionCurve = _wheels[1].Collider.sidewaysFriction;
+
+            {
+                backWheelSidewaysFrictionCurve.extremumValue = 2.0f;
+                backWheelSidewaysFrictionCurve.asymptoteSlip = 0.3f;
+                backWheelSidewaysFrictionCurve.asymptoteValue = 10.0f;
+            }
+
+            _wheels[1].Collider.sidewaysFriction = backWheelSidewaysFrictionCurve;
         }
 
         private void Update()
