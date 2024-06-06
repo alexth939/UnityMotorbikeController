@@ -12,3 +12,16 @@ If you like, help me to add the animations of a player above the bike, the light
 ## Ссылки
 
 Доска миро - https://miro.com/app/board/o9J_lO6Srm4=/
+
+## Title Variants
+
+1. "Ultimate Delivery"
+2. "Doomsday Delivery"
+3. "Final Delivery"
+4. "Redemption Delivery"
+5. "Survival Delivery"
+6. "Endgame Delivery"
+7. "Rescue Delivery"
+8. "Critical Delivery"
+9. "Salvation Delivery"
+10. "Deliverance Delivery"
