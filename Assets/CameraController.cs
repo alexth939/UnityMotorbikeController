@@ -3,10 +3,11 @@ using UnityEngine;
 /// <summary>
 ///     For tests.
 /// </summary>
-public class CameraController: MonoBehaviour
+public class CameraController : MonoBehaviour
 {
     [SerializeField] private Camera _camera;
     [SerializeField] private CameraState[] _cameraStates;
+    [SerializeField] private Vector3 _positionOffset;
 
     private int _activeStateIndex;
 
@@ -19,10 +20,35 @@ public class CameraController: MonoBehaviour
             ActivatePreviousCameraState();
     }
 
+    private float _cameraEulerXOffset;
+    [SerializeField] private float _minXRotationOffset;
+    [SerializeField] private float _maxXRotationOffset;
+    [SerializeField] private float _xRotationSpeed = 1.0f;
+
     private void LateUpdate()
     {
-        _camera.transform.position = _cameraStates[_activeStateIndex].PositionTarget.position;
+        float mouseHorizontalDelta = Input.GetAxis("Mouse Y");
+        mouseHorizontalDelta *= Time.deltaTime * _xRotationSpeed;
+        _cameraEulerXOffset += mouseHorizontalDelta;
+        _cameraEulerXOffset = Mathf.Clamp(_cameraEulerXOffset, _minXRotationOffset, _maxXRotationOffset);
+        //var mousePositionDelta = new Vector2()
+        //{
+        //    x = -Input.GetAxis("Mouse Y"),
+        //    y = Input.GetAxis("Mouse X"),
+        //};
+
+        //_cameraStates[_activeStateIndex].LookingTarget.position =
+        //    _cameraStates[_activeStateIndex].PositionTarget.position +
+        //    Quaternion.Euler(mousePositionDelta) *
+        //    (_cameraStates[_activeStateIndex].LookingTarget.position -
+        //    _cameraStates[_activeStateIndex].PositionTarget.position);
+
+        _camera.transform.position = _cameraStates[_activeStateIndex].PositionTarget.position +
+            _cameraStates[_activeStateIndex].PositionTarget.rotation * _positionOffset;
+
         _camera.transform.LookAt(_cameraStates[_activeStateIndex].LookingTarget.position);
+
+        _camera.transform.Rotate(-_cameraEulerXOffset, 0, 0, Space.Self);
     }
 
     private void OnGUI()
