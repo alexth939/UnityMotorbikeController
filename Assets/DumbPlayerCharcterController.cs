@@ -28,17 +28,18 @@ public class DumbPlayerCharcterController : MonoBehaviour
 
     private void FixedUpdate()
     {
-        if(_controller.isGrounded == false)
-            transform.Translate(Vector3.down * fallingSpeed);
+        //if(_controller.isGrounded == false)
+        //    transform.Translate(Vector3.down * fallingSpeed);
 
         float runSpeedTarget = _runSpeedCurve.Evaluate(_normalizedRunSpeedTarget);
-        var rawMoveDirectionWithGravity = new Vector3()
+        Vector3 rawMoveDirectionWithGravity = new()
         {
             x = _rawMoveDirection.x * runSpeedTarget,
             y = _yVelocity,
             z = _rawMoveDirection.z * runSpeedTarget,
         };
-        _controller.Move(transform.rotation * rawMoveDirectionWithGravity);
+
+        _ = _controller.Move(transform.rotation * rawMoveDirectionWithGravity);
 
         if(_isInAir && _controller.isGrounded)
         {
@@ -62,7 +63,7 @@ public class DumbPlayerCharcterController : MonoBehaviour
     [SerializeField] private float _movingAccelerationSpeed = 0.01f;
     [SerializeField] private float _movingDecelerationSpeed = 0.01f;
 
-    private bool _isInAir = false;
+    [SerializeField] private bool _isInAir = false;
 
     private void OnGrounded()
     {
@@ -85,11 +86,24 @@ public class DumbPlayerCharcterController : MonoBehaviour
         float maxDegreesDelta = 1500 * Time.deltaTime;
         transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(_worldBodyLookTarget, Vector3.up), maxDegreesDelta);
 
+        if(_isInAir && Input.GetKey(KeyCode.Space))
+        {
+            Vector3 zombieCheckVector = transform.forward + Vector3.down;
+            
+            Ray zombieCheckRay = new(transform.position, zombieCheckVector);
+            float zombieCheckDistance = 0.5f;
+            int zombieLayerMask = LayerMask.GetMask("Character");
+
+            if(Physics.SphereCast(zombieCheckRay, 0.5f, out RaycastHit hitInfo, zombieCheckDistance, zombieLayerMask, QueryTriggerInteraction.Collide))
+            //if(Physics.Raycast(zombieCheckRay, out RaycastHit hitInfo, zombieCheckDistance, zombieLayerMask, QueryTriggerInteraction.Collide))
+            {
+                Jump();
+            }
+        }
+
         if(Input.GetKeyDown(KeyCode.Space) && _controller.isGrounded)
         {
-            _yVelocity = 0.3f;//0.15f;
-            _isInAir = true;
-            _animator.SetTrigger("Jump");
+            Jump();
         }
 
         _rawMoveDirection = new Vector3()
@@ -98,5 +112,12 @@ public class DumbPlayerCharcterController : MonoBehaviour
             //y = _yVelocity,
             z = Input.GetAxis("Vertical"),
         };
+    }
+
+    private void Jump()
+    {
+        _yVelocity = 0.3f;//0.15f;
+        _isInAir = true;
+        _animator.SetTrigger("Jump");
     }
 }
